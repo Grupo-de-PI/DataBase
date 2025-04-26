@@ -184,7 +184,6 @@ empresa as emp join endereco as ende
 	on emp.fk_endereco = ende.id_endereco;
     
     
-    
 -- locais x Sensores x monitoramento
 select 
 	-- localização
@@ -203,10 +202,12 @@ from local_monitoramento as loc join sensor as sens
 	on sens.fk_local = loc.id_local
 left join leitura as val
 	on val.fk_sensor = sens.id_sensor;
+    
+    
 
 
 
--- locais x sensores x monitoramento - de um setor e um sensor
+-- locais x sensores x monitoramento - maiores que 10
 select 
 	-- localização
 	loc.nome as 'Local' , 
@@ -224,4 +225,4 @@ from local_monitoramento as loc join sensor as sens
 	on sens.fk_local = loc.id_local
 left join leitura as val
 	on val.fk_sensor = sens.id_sensor
-    where setor = 'Norte' and id_sensor = 1;
+    where val.valor_ppm > 10;
