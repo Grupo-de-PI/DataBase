@@ -10,8 +10,7 @@ create table empresa (
     razao_social varchar(250) not null,
     nome_fantasia varchar (150) not null,
     cnpj char (14) unique not null,
-    telefone_fixo varchar(13),
-    telefone_celular varchar (14),
+    telefone varchar (14),
     fk_endereco int not null,
     constraint cfkEndEmp foreign key (fk_endereco) 
 		references endereco(id_endereco)
@@ -35,10 +34,8 @@ create table funcionario (
     nome varchar(15) not null,
     sobrenome varchar (90) not null,
     cargo varchar(100) not null,
-    dt_nasc date not null,
     cpf char(11) unique not null,
-    telefone_fixo varchar(13),
-    telefone_celular varchar(14),
+    telefone varchar(14),
     email varchar (100) unique not null
 );
 insert into funcionario (fk_empresa, nome, sobrenome, cargo, dt_nasc, cpf, telefone_fixo, telefone_celular, email) values
@@ -96,7 +93,7 @@ create table endereco (
     bairro varchar(50) not null,
     cidade varchar (50) not null,
     estado_uf char(2) not null,
-    cep varchar(10) not null,
+    cep char(8) not null,
     pais varchar(50) not null,
     complemento varchar (50)
 );
