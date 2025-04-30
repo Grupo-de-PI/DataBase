@@ -70,8 +70,7 @@ create table login (
 	status_conta varchar(7) not null, 
     dt_cadastro datetime default current_timestamp,
     ultimo_login datetime default current_timestamp,
-    constraint ccktipo check (tipo_usuario in ('Visualização', 'Edição', 'Controle Total')),
-    constraint cckstatus check (status_conta in ('ativo', 'inativo'))
+
 );
 insert into login (fk_func_id, fk_func_emp, email_login, senha, tipo_usuario, status_conta, dt_cadastro, ultimo_login) values 
 (	1, 
@@ -135,8 +134,7 @@ create table sensor (
     dt_instalacao date not null,
     status_sensor varchar(7) not null,
     constraint cfkLocal foreign key (fk_local) 
-		references local_monitoramento(id_local),
-	 constraint cckstatus_sensor check (status_sensor in ('ativo', 'inativo'))
+		references local_monitoramento(id_local)
 );
 insert into sensor (fk_local, cod_serie, tipo, dt_instalacao, status_sensor) values 
 (1, '93725789352', 'Mq-2', '2024-12-13', 'ativo');
