@@ -2,7 +2,27 @@ create database air_safe;
 
 use air_safe;
 
--- ------------------------------------------clientes--------------------------------------------------------------------------------------
+
+
+-- Complemento da tabela empresa para evitar redundâncias e escalabilidade de processamento
+create table endereco (
+	id_endereco int primary key auto_increment,
+    logradouro varchar(30) not null,
+    numero int not null,
+    complemento varchar (50),
+     bairro varchar(50) not null,
+	cep char(8) not null,
+    cidade varchar (50) not null,
+    estado_uf char(2) not null,
+    pais varchar(50) not null
+);
+insert into endereco (logradouro, numero, complemento,  bairro, cep, cidade, estado_uf, pais) values
+	('Rua Mirabela',435, null, 'Chácara Belenzinho','03376100','São Paulo', 'SP ','Brasil' ); 
+
+select * from endereco;
+
+
+
 
 -- empresa que contratou nossos servicos
 create table empresa (
@@ -10,106 +30,47 @@ create table empresa (
     razao_social varchar(250) not null,
     nome_fantasia varchar (150) not null,
     cnpj char (14) unique not null,
-    telefone varchar (14),
+    telefone_comecial varchar (14),
+    telefone_celular varchar (14),
+    codigo_ativacao varchar(20) not null,
     fk_endereco int not null,
     constraint cfkEndEmp foreign key (fk_endereco) 
 		references endereco(id_endereco)
 );
-insert into empresa (razao_social, nome_fantasia, cnpj, telefone_fixo, telefone_celular, fk_endereco) values
-(	'Jaqueline e Valentina frigorífico Ltda',
-	'FV Carnes',
-    '12661774000142',
-    '1926612748',
-    '19992425550',
-    1
-);
+insert into empresa (razao_social, nome_fantasia, cnpj, telefone_comecial, telefone_celular, codigo_ativacao, fk_endereco) values
+	('Jaqueline e Valentina frigorífico Ltda','FV Carnes','12661774000142','1926612748','19992425550','EF345',1);
 select * from empresa;
+
+
+
 
 -- funcionario dessa empresa que será o usuario
 create table funcionario (
 	id_funcionario int auto_increment,
     fk_empresa int,
     constraint pkFuncEmp primary key (id_funcionario, fk_empresa),
-    constraint cfkEmp foreign key (fk_empresa) references empresa (id_empresa),
     nome varchar(15) not null,
     sobrenome varchar (90) not null,
-    cargo varchar(100) not null,
     cpf char(11) unique not null,
     telefone varchar(14),
-    email varchar (100) unique not null
+    email varchar (60) unique not null,
+    senha varchar(20) not null,
+	constraint cfkEmp foreign key (fk_empresa) 
+		references empresa (id_empresa)
 );
-insert into funcionario (fk_empresa, nome, sobrenome, cargo, dt_nasc, cpf, telefone_fixo, telefone_celular, email) values
+insert into funcionario (fk_empresa, nome, sobrenome, cpf, telefone, email, senha) values
  ( 1, 
   'Renato',
   'Carlos Eduardo Corte Real',
-  'Coordenador de produção',
-  '1997-01-18',
-  '45944044489',
   '8127217471',
   '81991509348',
-  'renato.carlos.cortereal@JaquelineValentina.frigorífico.com.br'
+  'renato.carlos.cortereal@JaquelineValentina.com.br',
+  '12345678'
  ); 
  select * from funcionario;
- 
 
 
--- ------------------------------------------extensões----------------------------------------------------------------------------------------
--- tabelas de relação forte, as quais servem de complemento a tabelas existentes; segurança e método contra redundãncia
 
--- login irá conter informações de acesso do funcionario
-create table login (
-	id_login int auto_increment,
-    fk_func_id int,
-    fk_func_emp int,
-    constraint pkFuncEmp primary key (id_login, fk_func_emp, fk_func_id), -- Chaves primarias - tabela funcionario tem chaves compostas
-    constraint cfkFuncEmp foreign key (fk_func_id, fk_func_emp) 
-		references funcionario (id_funcionario, fk_empresa), -- foreign key composta
-    email_login varchar(100) unique not null,
-    senha varchar (20) not null,
-    tipo_usuario varchar(14) not null,
-	status_conta varchar(7) not null, 
-    dt_cadastro datetime default current_timestamp,
-    ultimo_login datetime default current_timestamp,
-
-);
-insert into login (fk_func_id, fk_func_emp, email_login, senha, tipo_usuario, status_conta, dt_cadastro, ultimo_login) values 
-(	1, 
-	1, 
-    'renato.carlos.cortereal@JaquelineValentina.frigorífico.com.br', 
-    'renato123', 
-    'Controle Total',
-    'ativo', 
-    default,
-    default)
-;
-    select * from login;
-
--- Complemento da tabela funcionario para evitar redundâncias e escalabilidade de processamento
-create table endereco (
-	id_endereco int primary key auto_increment,
-    logradouro varchar(30) not null,
-    numero int not null,
-    bairro varchar(50) not null,
-    cidade varchar (50) not null,
-    estado_uf char(2) not null,
-    cep char(8) not null,
-    pais varchar(50) not null,
-    complemento varchar (50)
-);
-insert into endereco (logradouro, numero, bairro, cidade, estado_uf, cep, pais, complemento ) values
-(	'Rua Mirabela',
-	435,
-    'Chácara Belenzinho',
-    'São Paulo', 
-    'SP',
-    '03376100', 
-    'Brasil', 
-    null
-); 
-select * from endereco;
-
--- ------------------------------------------sensores----------------------------------------------------------------------------------------- 
--- parte que diz respeitoa informações dos sensores
 
 -- localização unica
 create table local_monitoramento (
@@ -125,19 +86,27 @@ insert into local_monitoramento (nome, descricao, setor, fkEmpresa) values
 ('Sala das máquinas', 'Sala que resfria a amônia por meio de condensadores e liberação externa', 'Norte', 1);
 select * from local_monitoramento;
 
+
+
+
 -- tabela sobre o sensor físico como produto
 create table sensor (
 	id_sensor int primary key auto_increment,
     fk_local int unique not null,
-    cod_serie varchar (100) not null unique,
-    tipo varchar(20) not null,
+    cod_serie varchar (30) not null unique,
     dt_instalacao date not null,
-    status_sensor varchar(7) not null,
+    status_sensor tinyint not null,
+    ultima_manutencao_preventiva date,
+    ultima_manutencao_preditiva date,
+    ultima_manutencao_corretiva date,
     constraint cfkLocal foreign key (fk_local) 
 		references local_monitoramento(id_local)
 );
-insert into sensor (fk_local, cod_serie, tipo, dt_instalacao, status_sensor) values 
-(1, '93725789352', 'Mq-2', '2024-12-13', 'ativo');
+insert into sensor (fk_local, cod_serie, dt_instalacao, status_sensor, ultima_manutencao_preventiva, ultima_manutencao_preditiva, ultima_manutencao_corretiva) values 
+	(1, '93725789352', '2024-12-13', 1, null, null, null);
+
+
+
 
 -- tabela dependente da tabela sensor, onde armazenas os dados coletados no ambiente
 create table leitura (
@@ -149,9 +118,11 @@ create table leitura (
     constraint cfkSensor foreign key (fk_sensor)
 		references sensor (id_sensor)
 );
--- insert de leitrua é por api 
 
-show tables;
+insert into leitura values 
+(2,1,default,10.00);
+
+select * from leitura;
 
 -- ---------------------------------------------------------------------------SELECTS-----------------------------------------------------------------------------------------------------------------------------	
 
