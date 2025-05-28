@@ -78,33 +78,32 @@ create table local_monitoramento (
     nome varchar(45) not null,
     descricao varchar(100) not null,
     setor varchar (45) not null,
-    fkEmpresa int,
+    fk_empresa int,
     constraint cfkLocalEmpresa foreign key (fkempresa) 
 		references empresa(id_empresa)
 );
+
 insert into local_monitoramento (nome, descricao, setor, fkEmpresa) values 
 ('Sala das máquinas', 'Sala que resfria a amônia por meio de condensadores e liberação externa', 'Norte', 1);
 select * from local_monitoramento;
 
 
 
-
 -- tabela sobre o sensor físico como produto
 create table sensor (
 	id_sensor int primary key auto_increment,
-    fk_local int unique not null,
+    fk_local int not null,
     cod_serie varchar (30) not null unique,
     dt_instalacao date not null,
     status_sensor tinyint not null,
-    ultima_manutencao_preventiva date,
+    próxima_manutencao_preventiva date,
     ultima_manutencao_preditiva date,
     ultima_manutencao_corretiva date,
     constraint cfkLocal foreign key (fk_local) 
 		references local_monitoramento(id_local)
 );
-insert into sensor (fk_local, cod_serie, dt_instalacao, status_sensor, ultima_manutencao_preventiva, ultima_manutencao_preditiva, ultima_manutencao_corretiva) values 
-	(1, '93725789352', '2024-12-13', 1, null, null, null);
-
+insert into sensor (fk_local, cod_serie, dt_instalacao, status_sensor, próxima_manutencao_preventiva, ultima_manutencao_preditiva, ultima_manutencao_corretiva) values 
+(1, '93725789358', '2024-12-13', 1, '2025-02-15', '2025-02-20', '2024-03-20');
 
 
 
@@ -118,77 +117,99 @@ create table leitura (
     constraint cfkSensor foreign key (fk_sensor)
 		references sensor (id_sensor)
 );
-
-insert into leitura values 
-(2,1,default,10.00);
+insert into leitura (fk_sensor, valor_ppm) values 
+(2,10.00);
 
 select * from leitura;
 
 -- ---------------------------------------------------------------------------SELECTS-----------------------------------------------------------------------------------------------------------------------------	
 
--- select empresa x endereco
-select 
--- empresa
-emp.razao_social as 'Razão social da Empresa', 
-emp.nome_fantasia as 'Nome Fantasia da empresa', 
-emp.cnpj as 'CNPJ', 
-emp.telefone_fixo as 'Telefone Fixo', 
-emp.telefone_celular as 'Celular para contato', 
--- endereço
-concat(
-	ende.logradouro, ', nº ',
-	ende.numero, ', ',
-	ifnull(ende.complemento, 'Sem complemento'), ', ',
-	ende.bairro, ', ',
-	ende.cidade, '/',
-	ende.estado_uf, ' - ',
-	ende.cep, ' - ',
-	ende.pais
-) as 'Endereço'
-from 
-empresa as emp join endereco as ende 
-	on emp.fk_endereco = ende.id_endereco;
+-- Pack data manutenções ---------------------------------------------------------------------------------------------------------
+create view vw_datas_manutencoes as
+	select 
+		próxima_manutencao_preventiva as Preventiva, 
+		ultima_manutencao_preditiva as Preditiva, 
+		ultima_manutencao_corretiva as Corretiva
+	from sensor;
     
-    
--- locais x Sensores x monitoramento
-select 
-	-- localização
-	loc.nome as 'Local' , 
-	loc.descricao as 'Descrição do local', 
-	loc.setor as 'Zona do local', 
-	-- sensores
-	sens.cod_serie as 'codigo de serie', 
-	sens.tipo as 'Modelo do sensor', 
-	sens.dt_instalacao as 'Data de instalação', 
-	sens.status_sensor as 'Status do sensor',
-	-- Valores coletados
-	val.data_hora as 'Momento da captura', 
-	val.valor_ppm as 'Nível de amônia' 
-from local_monitoramento as loc join sensor as sens
-	on sens.fk_local = loc.id_local
-left join leitura as val
-	on val.fk_sensor = sens.id_sensor;
-    
-    
+select * from vw_datas_manutencoes;
+-- ------------------------------------------------------------------------------------------------------------------------------
 
+-- Pack de histórico geral e por sensor -------------------------------------------------------------------------------------------------
 
+alter view vw_historico_registros as
+	select 
+		emp.codigo_ativacao as codigo,
+		loc.fk_empresa as id_emp,
+		sens.fk_local as id_loc,
+		lei.fk_sensor as id_sens,
+		TIME(data_hora) as HoraRegistro,
+		lei.valor_ppm as valor
+	from 
+		empresa as emp join local_monitoramento as loc	
+			on emp.id_empresa = loc.fk_empresa
+		join sensor as sens
+			on loc.id_local = sens.fk_local
+		join leitura as lei
+			on lei.fk_sensor = sens.id_sensor;
 
--- locais x sensores x monitoramento - maiores que 10
-select 
-	-- localização
-	loc.nome as 'Local' , 
-	loc.descricao as 'Descrição do local', 
-	loc.setor as 'Zona do local', 
-	-- sensores
-	sens.cod_serie as 'codigo de serie', 
-	sens.tipo as 'Modelo do sensor', 
-	sens.dt_instalacao as 'Data de instalação', 
-	sens.status_sensor as 'Status do sensor',
-	-- Valores coletados
-	val.data_hora as 'Momento da captura', 
-	val.valor_ppm as 'Nível de amônia' 
-from local_monitoramento as loc join sensor as sens
-	on sens.fk_local = loc.id_local
-left join leitura as val
-	on val.fk_sensor = sens.id_sensor
-    where val.valor_ppm > 10;
+-- Registros gerais
+select * from vw_historico_registros;
+
+-- Registro por sensor
+select HoraRegistro, valor from vw_historico_registros 
+	where fk_sensor = 1;
+
+-- --------------------------------------------------------------------------------------------------------------------------------
+
+-- Pack de distribuição de vazamentos % -------------------------------------------------------------------------------------------------
+
+ alter view vw_distribuicao as
+	select 
+		emp.codigo_ativacao as codigo,
+		loc.fk_empresa as id_emp,
+        loc.nome as nome_loc,
+		lei.fk_sensor as id_sens,
+        month(data_hora) as mesRegistro,
+		TIME(data_hora) as horaRegistro,
+		lei.valor_ppm as valor
+	from 
+		empresa as emp join local_monitoramento as loc	
+			on emp.id_empresa = loc.fk_empresa
+		join sensor as sens
+			on loc.id_local = sens.fk_local
+		join leitura as lei
+			on lei.fk_sensor = sens.id_sensor;
+   
+   -- geral
+	select * from vw_distribuicao;
+    
+    -- Por local
+	select nome_loc, count(valor) 
+		from vw_distribuicao
+		where valor > 10
+        group by nome_loc;
+  -- --------------------------------------------------------------------------------------------------------------------------------
+  
+  -- Pack de registros medios -------------------------------------------------------------------------------------------------
+       select nome_loc, avg(valor) 
+		from vw_distribuicao
+        group by nome_loc;
+-- --------------------------------------------------------------------------------------------------------------------------------
+
+-- Pack dias sem vazamento --------------------------------------------------------------------------------------------------------------------------
+    -- Por local
+	select mesRegistro
+		from vw_distribuicao
+        where valor > 10;
+-- --------------------------------------------------------------------------------------------------------------------------------
+
+-- Pack dias sensores ativos --------------------------------------------------------------------------------------------------------------------------
+    -- Sensores ativos
+	select count(id_sensor) from sensor
+		where status_sensor = 1;
+        
+	-- Sensores totais
+        -- Sensores ativos
+	select count(id_sensor) from sensor;
+-- ---------------------------------------------------------------------------------------------------
