@@ -1,7 +1,6 @@
-create database air_safe;
+
 
 use air_safe;
-
 
 
 -- Complemento da tabela empresa para evitar redundâncias e escalabilidade de processamento
@@ -79,11 +78,11 @@ create table local_monitoramento (
     descricao varchar(100) not null,
     setor varchar (45) not null,
     fk_empresa int,
-    constraint cfkLocalEmpresa foreign key (fkempresa) 
+    constraint cfkLocalEmpresa foreign key (fk_empresa) 
 		references empresa(id_empresa)
 );
 
-insert into local_monitoramento (nome, descricao, setor, fkEmpresa) values 
+insert into local_monitoramento (nome, descricao, setor, fk_empresa) values 
 ('Sala das máquinas', 'Sala que resfria a amônia por meio de condensadores e liberação externa', 'Norte', 1);
 select * from local_monitoramento;
 
@@ -103,7 +102,8 @@ create table sensor (
 		references local_monitoramento(id_local)
 );
 insert into sensor (fk_local, cod_serie, dt_instalacao, status_sensor, próxima_manutencao_preventiva, ultima_manutencao_preditiva, ultima_manutencao_corretiva) values 
-(1, '93725789358', '2024-12-13', 1, '2025-02-15', '2025-02-20', '2024-03-20');
+(1, '93725789359', '2024-12-13', 1, '2025-02-15', '2025-02-20', '2024-03-20'),
+(1, '93725789310', '2024-12-13', 1, '2025-02-15', '2025-02-20', '2024-03-20');
 
 
 
@@ -117,14 +117,19 @@ create table leitura (
     constraint cfkSensor foreign key (fk_sensor)
 		references sensor (id_sensor)
 );
-insert into leitura (fk_sensor, valor_ppm) values 
-(2,10.00);
+
 
 select * from leitura;
 
+-- truncate table leitura; 
+
 -- ---------------------------------------------------------------------------SELECTS-----------------------------------------------------------------------------------------------------------------------------	
 
--- Pack data manutenções ---------------------------------------------------------------------------------------------------------
+
+
+
+
+-- Pack data manutenções -------------------------------------------------------------------------------------------------------------------------------------------------
 create view vw_datas_manutencoes as
 	select 
 		próxima_manutencao_preventiva as Preventiva, 
@@ -133,11 +138,19 @@ create view vw_datas_manutencoes as
 	from sensor;
     
 select * from vw_datas_manutencoes;
--- ------------------------------------------------------------------------------------------------------------------------------
+-- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
--- Pack de histórico geral e por sensor -------------------------------------------------------------------------------------------------
 
-alter view vw_historico_registros as
+
+
+
+
+
+
+
+-- Pack de histórico geral e por sensor --------------------------------------------------------------------------------------------------------------------------------------------------------
+
+create view vw_historico_registros as
 	select 
 		emp.codigo_ativacao as codigo,
 		loc.fk_empresa as id_emp,
@@ -160,11 +173,18 @@ select * from vw_historico_registros;
 select HoraRegistro, valor from vw_historico_registros 
 	where fk_sensor = 1;
 
--- --------------------------------------------------------------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
--- Pack de distribuição de vazamentos % -------------------------------------------------------------------------------------------------
 
- alter view vw_distribuicao as
+
+
+
+
+
+
+-- Pack de distribuição de vazamentos % ---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ create view vw_distribuicao as
 	select 
 		emp.codigo_ativacao as codigo,
 		loc.fk_empresa as id_emp,
@@ -189,27 +209,26 @@ select HoraRegistro, valor from vw_historico_registros
 		from vw_distribuicao
 		where valor > 10
         group by nome_loc;
-  -- --------------------------------------------------------------------------------------------------------------------------------
   
-  -- Pack de registros medios -------------------------------------------------------------------------------------------------
+  -- Pack de registros medios -------
        select nome_loc, avg(valor) 
 		from vw_distribuicao
         group by nome_loc;
--- --------------------------------------------------------------------------------------------------------------------------------
 
--- Pack dias sem vazamento --------------------------------------------------------------------------------------------------------------------------
+
+-- Pack dias sem vazamento --------
     -- Por local
 	select mesRegistro
 		from vw_distribuicao
         where valor > 10;
--- --------------------------------------------------------------------------------------------------------------------------------
-
--- Pack dias sensores ativos --------------------------------------------------------------------------------------------------------------------------
+        
+        
+-- Pack dias sensores ativos ----------
     -- Sensores ativos
 	select count(id_sensor) from sensor
 		where status_sensor = 1;
         
+        
 	-- Sensores totais
         -- Sensores ativos
-	select count(id_sensor) from sensor;
--- ---------------------------------------------------------------------------------------------------
+	select count(id_sensor) from sensor; 6
