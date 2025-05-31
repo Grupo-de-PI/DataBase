@@ -82,8 +82,13 @@ create table local_monitoramento (
 		references empresa(id_empresa)
 );
 
+
 insert into local_monitoramento (nome, descricao, setor, fk_empresa) values 
-('Sala das máquinas', 'Sala que resfria a amônia por meio de condensadores e liberação externa', 'Norte', 1);
+('Sala das maquinas', 'Sala que resfria a amônia por meio de condensadores e liberação externa', 'Norte', 1),
+('Câmara de Refriamento', 'Sala que resfria a amônia por meio de condensadores e liberação externa', 'Norte', 1),
+('Câmara de estocggem', 'Sala que resfria a amônia por meio de condensadores e liberação externa', 'Norte', 1),
+('Túnel congelador', 'Sala que resfria a amônia por meio de condensadores e liberação externa', 'Norte', 1);
+
 select * from local_monitoramento;
 
 
@@ -105,6 +110,13 @@ insert into sensor (fk_local, cod_serie, dt_instalacao, status_sensor, próxima_
 (1, '93725789359', '2024-12-13', 1, '2025-02-15', '2025-02-20', '2024-03-20'),
 (1, '93725789310', '2024-12-13', 1, '2025-02-15', '2025-02-20', '2024-03-20');
 
+insert into sensor (fk_local, cod_serie, dt_instalacao, status_sensor, próxima_manutencao_preventiva, ultima_manutencao_preditiva, ultima_manutencao_corretiva) values 
+(2, '23725789359', '2024-12-13', 1, '2025-02-15', '2025-02-20', '2024-03-20'),
+(3, '33725789310', '2024-12-13', 1, '2025-02-15', '2025-02-20', '2024-03-20'),
+(4, '43725789310', '2024-12-13', 1, '2025-02-15', '2025-02-20', '2024-03-20');
+
+select * from sensor;
+
 
 
 -- tabela dependente da tabela sensor, onde armazenas os dados coletados no ambiente
@@ -119,6 +131,7 @@ create table leitura (
 );
 
 
+
 select * from leitura;
 
 -- truncate table leitura; 
@@ -128,35 +141,18 @@ select * from leitura;
 
 
 
-
--- Pack data manutenções -------------------------------------------------------------------------------------------------------------------------------------------------
-create view vw_datas_manutencoes as
-	select 
-		próxima_manutencao_preventiva as Preventiva, 
-		ultima_manutencao_preditiva as Preditiva, 
-		ultima_manutencao_corretiva as Corretiva
-	from sensor;
-    
-select * from vw_datas_manutencoes;
--- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
 -- Pack de histórico geral e por sensor --------------------------------------------------------------------------------------------------------------------------------------------------------
 
-create view vw_historico_registros as
+-- Com intuito o grafico de linha
+alter view vw_historico_registros as
 	select 
-		emp.codigo_ativacao as codigo,
-		loc.fk_empresa as id_emp,
-		sens.fk_local as id_loc,
-		lei.fk_sensor as id_sens,
-		TIME(data_hora) as HoraRegistro,
+		emp.id_empresa as id_emp,
+        emp.codigo_ativacao as codigo,
+        loc.id_local as id_loc, 
+        loc.nome as nome_loc,
+        sens.id_sensor as id_sens,
+        sens.status_sensor as status_sens,
+		data_hora as HoraRegistro,
 		lei.valor_ppm as valor
 	from 
 		empresa as emp join local_monitoramento as loc	
@@ -165,64 +161,24 @@ create view vw_historico_registros as
 			on loc.id_local = sens.fk_local
 		join leitura as lei
 			on lei.fk_sensor = sens.id_sensor;
-
--- Registros gerais
+            
 select * from vw_historico_registros;
 
--- Registro por sensor
-select HoraRegistro, valor from vw_historico_registros 
-	where fk_sensor = 1;
 
--- -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- Grafico de linha 
+select distinct id_sens, valor, DATE_FORMAT(time(HoraRegistro), '%H:%i:%s') AS HoraRegistro from vw_historico_registros where codigo = 'EF345' order by id_sens asc;
 
-
-
+-- Gráfico de barra
+select distinct nome_loc,  avg(valor) as media from vw_historico_registros where codigo = 'EF345' group by id_loc;
 
 
 
+-- Gráfico de Porcentage,
+select * from leitura;
+-- KPIS
 
 
--- Pack de distribuição de vazamentos % ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 
- create view vw_distribuicao as
-	select 
-		emp.codigo_ativacao as codigo,
-		loc.fk_empresa as id_emp,
-        loc.nome as nome_loc,
-		lei.fk_sensor as id_sens,
-        month(data_hora) as mesRegistro,
-		TIME(data_hora) as horaRegistro,
-		lei.valor_ppm as valor
-	from 
-		empresa as emp join local_monitoramento as loc	
-			on emp.id_empresa = loc.fk_empresa
-		join sensor as sens
-			on loc.id_local = sens.fk_local
-		join leitura as lei
-			on lei.fk_sensor = sens.id_sensor;
-   
-   -- geral
-	select * from vw_distribuicao;
-    
-    -- Por local
-	select nome_loc, count(valor) 
-		from vw_distribuicao
-		where valor > 10
-        group by nome_loc;
-  
-  -- Pack de registros medios -------
-       select nome_loc, avg(valor) 
-		from vw_distribuicao
-        group by nome_loc;
-
-
--- Pack dias sem vazamento --------
-    -- Por local
-	select mesRegistro
-		from vw_distribuicao
-        where valor > 10;
-        
-        
 -- Pack dias sensores ativos ----------
     -- Sensores ativos
 	select count(id_sensor) from sensor
@@ -231,4 +187,4 @@ select HoraRegistro, valor from vw_historico_registros
         
 	-- Sensores totais
         -- Sensores ativos
-	select count(id_sensor) from sensor; 6
+	select count(id_sensor) from sensor; 
