@@ -129,7 +129,8 @@ create table leitura (
     constraint cfkSensor foreign key (fk_sensor)
 		references sensor (id_sensor)
 );
-
+ insert into leitura (fk_sensor, valor_ppm) values
+	(1,18.00);
 
 
 select * from leitura;
@@ -157,34 +158,44 @@ alter view vw_historico_registros as
 	from 
 		empresa as emp join local_monitoramento as loc	
 			on emp.id_empresa = loc.fk_empresa
-		join sensor as sens
+		right join sensor as sens
 			on loc.id_local = sens.fk_local
 		join leitura as lei
 			on lei.fk_sensor = sens.id_sensor;
             
-select * from vw_historico_registros;
+select * from vw_historico_registros order by HoraRegistro desc;
 
 
 -- Grafico de linha 
-select distinct id_sens, valor, DATE_FORMAT(time(HoraRegistro), '%H:%i:%s') AS HoraRegistro from vw_historico_registros where codigo = 'EF345' order by id_sens asc;
+select distinct nome_loc, avg(valor), DATE_FORMAT(time(HoraRegistro), '%H:%i:%s') AS HoraRegistro from vw_historico_registros 
+	where codigo = 'EF345' 
+		group by nome_loc, DATE_FORMAT(time(HoraRegistro), '%H:%i:%s')
+		order by HoraRegistro asc;
 
 -- Gráfico de barra
 select distinct nome_loc,  avg(valor) as media from vw_historico_registros where codigo = 'EF345' group by id_loc;
 
-
-
 -- Gráfico de Porcentage,
 select * from leitura;
+
 -- KPIS
+-- KPI 1 - dias sem vazamento
+SELECT 
+  DATEDIFF(CURDATE(), MAX(DATE(HoraRegistro))) AS dias
+FROM vw_historico_registros
+WHERE valor > 17 	;
+
+-- KPI 2 - sensores
+	select 
+		(select count(id_sensor) from sensor) as sensores_totais,
+		(select count(status_sensor) from sensor where status_sensor=1) as sensores_ativos
+		from vw_historico_registros 
+        where codigo = 'EF345'
+        group by sensores_totais, sensores_ativos;
+
+-- KPI 3 - Maior media
+	select distinct nome_loc from vw_historico_registros 
+		where CURDATE() and valor = (select max(valor) from vw_historico_registros);
 
 
 
--- Pack dias sensores ativos ----------
-    -- Sensores ativos
-	select count(id_sensor) from sensor
-		where status_sensor = 1;
-        
-        
-	-- Sensores totais
-        -- Sensores ativos
-	select count(id_sensor) from sensor; 
