@@ -1,4 +1,4 @@
-
+create database air_safe;
 
 use air_safe;
 
@@ -16,7 +16,8 @@ create table endereco (
     pais varchar(50) not null
 );
 insert into endereco (logradouro, numero, complemento,  bairro, cep, cidade, estado_uf, pais) values
-	('Rua Mirabela',435, null, 'Chácara Belenzinho','03376100','São Paulo', 'SP ','Brasil' ); 
+	('Rua Mirabela',435, null, 'Chácara Belenzinho','03376100','São Paulo', 'SP ','Brasil' ),
+	('Rua Frigos',345, null, 'Chácara Frigos','03376500','São Paulo', 'SP ','Brasil' );
 
 select * from endereco;
 
@@ -37,9 +38,10 @@ create table empresa (
 		references endereco(id_endereco)
 );
 insert into empresa (razao_social, nome_fantasia, cnpj, telefone_comecial, telefone_celular, codigo_ativacao, fk_endereco) values
-	('Jaqueline e Valentina frigorífico Ltda','FV Carnes','12661774000142','1926612748','19992425550','EF345',1);
-select * from empresa;
+	('AirSafe Ltda.', 'AirSafe', '12261171000147', '1926612749', '19992425551', 'AS345',1),
+    ('Jaqueline e Valentina frigorífico Ltda','FV Carnes','12661774000142','1926612748','19992425550','EF345',2);
 
+select * from empresa;
 
 
 
@@ -58,7 +60,7 @@ create table funcionario (
 		references empresa (id_empresa)
 );
 insert into funcionario (fk_empresa, nome, sobrenome, cpf, telefone, email, senha) values
- ( 1, 
+ ( 2, 
   'Renato',
   'Carlos Eduardo Corte Real',
   '8127217471',
@@ -84,10 +86,10 @@ create table local_monitoramento (
 
 
 insert into local_monitoramento (nome, descricao, setor, fk_empresa) values 
-('Sala das maquinas', 'Sala que resfria a amônia por meio de condensadores e liberação externa', 'Norte', 1),
-('Câmara de Refriamento', 'Sala que resfria a amônia por meio de condensadores e liberação externa', 'Norte', 1),
-('Câmara de estocggem', 'Sala que resfria a amônia por meio de condensadores e liberação externa', 'Norte', 1),
-('Túnel congelador', 'Sala que resfria a amônia por meio de condensadores e liberação externa', 'Norte', 1);
+('Sala das maquinas', 'Sala que resfria a amônia por meio de condensadores e liberação externa', 'Norte', 2),
+('Câmara de Refriamento', 'Sala que resfria a amônia por meio de condensadores e liberação externa', 'Norte', 2),
+('Câmara de estocggem', 'Sala que resfria a amônia por meio de condensadores e liberação externa', 'Norte', 2),
+('Túnel congelador', 'Sala que resfria a amônia por meio de condensadores e liberação externa', 'Norte', 2);
 
 select * from local_monitoramento;
 
@@ -130,7 +132,14 @@ create table leitura (
 		references sensor (id_sensor)
 );
  insert into leitura (fk_sensor, valor_ppm) values
-	(1,18.00);
+	(1,18.00),
+	(2,17.00),
+	(3,16.00),
+	(4,15.00),
+	(5,23.00),
+	(5,30.00),
+	(3,20.00);
+    
 
 
 select * from leitura;
@@ -145,7 +154,7 @@ select * from leitura;
 -- Pack de histórico geral e por sensor --------------------------------------------------------------------------------------------------------------------------------------------------------
 
 -- Com intuito o grafico de linha
-alter view vw_historico_registros as
+create view vw_historico_registros as
 	select 
 		emp.id_empresa as id_emp,
         emp.codigo_ativacao as codigo,
@@ -163,20 +172,21 @@ alter view vw_historico_registros as
 		join leitura as lei
 			on lei.fk_sensor = sens.id_sensor;
             
-select * from vw_historico_registros order by HoraRegistro desc;
+select * from vw_historico_registros ;
 
 
 -- Grafico de linha 
 select distinct nome_loc, avg(valor), DATE_FORMAT(time(HoraRegistro), '%H:%i:%s') AS HoraRegistro from vw_historico_registros 
 	where codigo = 'EF345' 
-		group by nome_loc, DATE_FORMAT(time(HoraRegistro), '%H:%i:%s')
-		order by HoraRegistro asc;
+		group by nome_loc, DATE_FORMAT(time(HoraRegistro), '%H:%i:%s');
 
 -- Gráfico de barra
 select distinct nome_loc,  avg(valor) as media from vw_historico_registros where codigo = 'EF345' group by id_loc;
 
 -- Gráfico de Porcentage,
 select * from leitura;
+
+truncate table leitura;
 
 -- KPIS
 -- KPI 1 - dias sem vazamento
